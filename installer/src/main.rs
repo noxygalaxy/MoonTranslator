@@ -1,7 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 fn main() -> Result<(), eframe::Error> {
@@ -39,6 +40,8 @@ struct InstallerState {
     progress: f32, 
     status_text: String,
     finished: bool,
+    installed_exe: Option<String>,
+    shortcut_error: Option<String>,
     error: Option<String>,
 }
 
@@ -52,6 +55,8 @@ impl InstallerApp {
             progress: 0.0,
             status_text: "Initializing...".into(),
             finished: false,
+            installed_exe: None,
+            shortcut_error: None,
             error: None,
         }));
         
@@ -165,11 +170,140 @@ fn run_install(state: Arc<Mutex<InstallerState>>) -> Result<(), Box<dyn std::err
         }
     }
 
-    update(1.0, "Installation complete!");
-    
+    let installed_exe_path = find_installed_exe(&install_dir).ok();
+    let installed_exe_str = installed_exe_path
+        .as_ref()
+        .map(|p| p.to_string_lossy().to_string());
+
+    let mut shortcut_error: Option<String> = None;
+    if let Some(exe_path) = &installed_exe_path {
+        let icon_path = install_dir.join("icon.ico");
+        if let Err(e) = create_desktop_shortcut(exe_path, icon_path) {
+            shortcut_error = Some(e.to_string());
+        }
+    } else {
+        shortcut_error = Some("Could not locate the installed .exe file for shortcut creation.".into());
+    }
+
+    let mut final_status = "Installation complete!".to_string();
+    if shortcut_error.is_some() {
+        final_status = "Installation complete! (Desktop shortcut may not have been created)".into();
+    }
+    update(1.0, &final_status);
+
     let mut s = state.lock().unwrap();
     s.finished = true;
     s.progress = 1.0;
+    s.installed_exe = installed_exe_str;
+    s.shortcut_error = shortcut_error;
+
+    Ok(())
+}
+
+fn find_installed_exe(install_dir: &Path) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    for entry in std::fs::read_dir(install_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        let is_exe = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.eq_ignore_ascii_case("exe"))
+            .unwrap_or(false);
+        if !is_exe {
+            continue;
+        }
+
+        let file_name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_lowercase();
+
+        if file_name.starts_with("moon") || file_name.contains("moontranslator") {
+            candidates.push(path);
+        }
+    }
+
+    if candidates.is_empty() {
+        for entry in std::fs::read_dir(install_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            let is_exe = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.eq_ignore_ascii_case("exe"))
+                .unwrap_or(false);
+            if is_exe {
+                candidates.push(path);
+            }
+        }
+    }
+
+    candidates
+        .into_iter()
+        .next()
+        .ok_or_else(|| "No .exe found in install directory.".into())
+}
+
+fn ps_quote_single(s: &str) -> String {
+    let escaped = s.replace('\'', "''");
+    format!("'{}'", escaped)
+}
+
+fn create_desktop_shortcut(
+    target_exe: &Path,
+    icon_path: PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let user_profile = std::env::var("USERPROFILE")?;
+    let desktop_dir = PathBuf::from(user_profile).join("Desktop");
+    std::fs::create_dir_all(&desktop_dir)?;
+
+    let shortcut_path = desktop_dir.join("MoonTranslator.lnk");
+
+    let target_exe_str = target_exe.to_string_lossy().to_string();
+    let working_dir = target_exe
+        .parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let icon_line = if icon_path.exists() {
+        format!(
+            "$Shortcut.IconLocation = {};\n",
+            ps_quote_single(&icon_path.to_string_lossy())
+        )
+    } else {
+        String::new()
+    };
+
+    let ps_script = format!(
+        "$WshShell = New-Object -ComObject WScript.Shell;\n\
+         $Shortcut = $WshShell.CreateShortcut({shortcut});\n\
+         $Shortcut.TargetPath = {target};\n\
+         $Shortcut.WorkingDirectory = {workdir};\n\
+         {icon_line}\
+         $Shortcut.Save();\n",
+        shortcut = ps_quote_single(&shortcut_path.to_string_lossy()),
+        target = ps_quote_single(&target_exe_str),
+        workdir = ps_quote_single(&working_dir),
+        icon_line = icon_line,
+    );
+
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            &ps_script,
+        ])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Shortcut creation failed: {}", stderr).into());
+    }
 
     Ok(())
 }
@@ -248,6 +382,9 @@ impl eframe::App for InstallerApp {
                     if state.finished {
                         ui.add_space(30.0);
                         if ui.add_sized([120.0, 36.0], egui::Button::new("Finish")).clicked() {
+                            if let Some(installed_exe) = state.installed_exe.clone() {
+                                let _ = Command::new(installed_exe).spawn();
+                            }
                             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                         }
                     } else if let Some(err_msg) = &state.error {

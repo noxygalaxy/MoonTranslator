@@ -83,9 +83,6 @@ jobs:
           files: |
             MoonTranslator-App-${{ github.event.inputs.version }}-portable.zip
             MoonTranslator-Installer-${{ github.event.inputs.version }}.exe
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.zip
-            src-tauri/target/release/bundle/nsis/*.sig
           draft: false
           prerelease: false
         env:
