@@ -1,0 +1,31 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "MoonTranslator default capabilities",
+  "windows": ["main", "popup"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-position",
+    "core:window:allow-start-dragging",
+    "store:default",
+    "autostart:default",
+    "global-shortcut:default",
+    "clipboard-manager:default",
+    "clipboard-manager:allow-read-text",
+    "clipboard-manager:allow-write-text",
+    "shell:default",
+    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://**" }
+      ]
+    }
+  ]
+}

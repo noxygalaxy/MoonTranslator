@@ -1,0 +1,87 @@
+<div align="center">
+   <img src="public/logo.webp" alt="MoonTranslator Logo" width="80" height="80" />
+   <h1>MoonTranslator</h1>
+   <p><strong>A beautiful, minimalist, and smart desktop translator that actually gets out of your way.</strong></p>
+
+   <a href="https://www.gnu.org/licenses/gpl-3.0">
+      <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/LicenceGPLv3/licencegplv31.svg" alt="License: GPL v3" />
+   </a>
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/Windows/windows3.svg" alt="Windows" />
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/React/react3.svg" alt="React" />
+
+   <br>
+   
+   <img src=".github/_assets/app.png" alt="MoonTranslator App" width="700" />
+
+</div>
+
+---
+
+Hey there! 👋 Welcome to **MoonTranslator**.
+
+I wanted a translation app that just _worked_ without feeling clunky or taking up my entire screen. Something fast, pretty to look at, and smart enough to just translate things where I need them. That's why I built MoonTranslator!
+
+It uses a sleek Material Design 3 interface, lives quietly in your system tray, and pops up exactly when you need it. Plus, since it's built with Rust and Tauri, it uses barely any memory on your PC.
+
+## ✨ Why use it?
+
+- **Bring Your Own API:** Plug in your keys for DeepL, Google Translate, Microsoft Bing, Lara Translate—or even hit up your own custom API URL!
+- **The "Magic" Popup:** Highlight text anywhere on your PC (Discord, Word, a browser), double-tap `Ctrl+C`, and a mini translator pops right up next to your mouse pointer.
+- **Quick Replace:** Once you translate something in the floating popup, hit "Replace", and it instantly types the translation back into your document.
+- **Beautiful & Fluid:** Complete with a gorgeous dark/light theme, micro-animations, and smooth window transitions.
+- **Auto-Detect & Auto-Translate:** Just paste or type. It figures out the language and translates as you go.
+
+## 🏗️ What's inside?
+
+<div align="center">
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/React/react1.svg" alt="React" />
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/NextJS/nextjs1.svg" alt="NextJS" />
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/TypeScript/typescript1.svg" alt="TypeScript" />
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/CSS/css1.svg" alt="CSS" />
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/Rust/rust1.svg" alt="Rust" />
+   <img src="https://raw.githubusercontent.com/ziadOUA/m3-Markdown-Badges/master/badges/NodeJS/nodejs1.svg" alt="Node.js" />
+</div>
+<br>
+
+To pull this off, I'm using **React 19** with **Next.js (Static Export)** for a lightning-fast frontend. State is managed by **Zustand**, and the visuals are hand-crafted Vanilla CSS inspired by Material You.
+The backend powerhouse driving the window management, global shortcuts, clipboard monitoring, and secure storage is written in **Rust** using **Tauri v2**. 🦀
+
+## 🔑 How to get API Keys
+
+Since MoonTranslator interfaces with third-party providers directly, you'll need to generate your own personal API key for the platform you want to use. Here's a quick guide on where to find them (all major providers offer a generous Free Tier)!
+
+### <img src=".github/_assets/deepl.webp" width="24" /> DeepL (Recommended)
+
+DeepL provides incredibly accurate, natural-sounding translations. Their free tier covers 500,000 characters/month.
+
+1. Go to the [DeepL API account signup page](https://www.deepl.com/pro-api).
+2. Select **DeepL API Free** and create an account.
+3. Once logged in, navigate to the **API keys** tab under your Account summary and copy your new Authentication Key.
+
+### <img src=".github/_assets/google.webp" width="24" /> Google Cloud Translation
+
+1. Head to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a new project.
+3. In the search bar, look up **Cloud Translation API** and click **Enable**.
+4. Go to **APIs & Services** > **Credentials**.
+5. Click **Create Credentials** -> **API key** and copy the generated key.
+
+### <img src=".github/_assets/bing.webp" width="24" /> Microsoft Bing (Azure Translator)
+
+1. Go to the [Azure Portal](https://portal.azure.com/).
+2. Search for **Translator** in the top bar and click **Create** to launch a new resource.
+3. Once your resource is deployed, navigate to it and check the **Keys and Endpoint** section on the left sidebar to find your `Key 1`.
+
+### <img src=".github/_assets/lara.webp" width="24" /> Lara Translate
+
+1. Go to the [Lara Translate Credentials page](https://app.laratranslate.com/account/credentials).
+2. Generate a new API ID and API Secret.
+3. In MoonTranslator, paste them sequentially formatted as `AccessKeyID,AccessKeySecret`.
+
+### Custom URLs
+
+You can also run your own basic local or hosted translation server. Simply enter the full URL (e.g., `http://localhost:5000/translate`) into the Custom API field!
+
+## 📝 License
+
+Feel free to download, study, and fork it! The project is licensed under the GNU General Public License v3.0 (GPL-3.0) - see the [LICENSE](LICENSE) file for details. This ensures the app remains open and free forever.

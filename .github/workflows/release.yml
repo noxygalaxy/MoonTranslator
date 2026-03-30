@@ -1,0 +1,87 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release Version (e.g. v1.0.0)"
+        required: true
+        type: string
+        default: "v1.0.0"
+      release_title:
+        description: "Release Title"
+        required: true
+        type: string
+        default: "New Release"
+      release_body:
+        description: "Release Notes / Changelog"
+        required: false
+        type: string
+        default: "Bug fixes and performance improvements."
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build Tauri App
+        run: pnpm tauri build
+
+      - name: Package Portable App
+        shell: pwsh
+        run: |
+          mkdir MoonTranslator_Portable
+          Copy-Item "src-tauri\target\release\moon*.exe" "MoonTranslator_Portable\"
+          Copy-Item "public\icon.ico" "MoonTranslator_Portable\"
+          Compress-Archive -Path "MoonTranslator_Portable\*" -DestinationPath "MoonTranslator-App-${{ github.event.inputs.version }}-portable.zip"
+
+      - name: Build Custom Installer
+        run: |
+          cd installer
+          cargo build --release
+
+      - name: Package Custom Installer
+        shell: pwsh
+        run: |
+          Copy-Item "installer\target\release\moontranslator_installer.exe" "MoonTranslator-Installer-${{ github.event.inputs.version }}.exe"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: ${{ github.event.inputs.release_title }}
+          body: ${{ github.event.inputs.release_body }}
+          files: |
+            MoonTranslator-App-${{ github.event.inputs.version }}-portable.zip
+            MoonTranslator-Installer-${{ github.event.inputs.version }}.exe
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.zip
+            src-tauri/target/release/bundle/nsis/*.sig
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

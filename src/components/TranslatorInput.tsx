@@ -1,0 +1,54 @@
+"use client";
+
+import { useTranslatorStore } from "@/store/translatorStore";
+import { useRef, useEffect } from "react";
+import { X } from "lucide-react";
+
+export default function TranslatorInput() {
+  const { sourceText, setSourceText, charCount, wordCount } =
+    useTranslatorStore();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height =
+        Math.max(120, textareaRef.current.scrollHeight) + "px";
+    }
+  }, [sourceText]);
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      <textarea
+        ref={textareaRef}
+        value={sourceText}
+        onChange={(e) => setSourceText(e.target.value)}
+        placeholder="Enter text to translate..."
+        className="flex-1 w-full resize-none focus:outline-none min-h-30 bg-transparent text-foreground p-5 text-[15px] leading-relaxed tracking-wide caret-primary"
+        spellCheck={false}
+        autoFocus
+      />
+      <div
+        className="flex items-center justify-between px-6 shrink-0 h-17 opacity-80"
+      >
+        <div
+          className="flex items-center gap-3 text-xs font-mono text-secondary tracking-widest"
+        >
+          <span>{charCount} chars</span>
+          <span className="text-(--md-outline-variant)">•</span>
+          <span>{wordCount} words</span>
+        </div>
+        {sourceText ? (
+          <button
+            className="md-icon-btn state-layer animate-fade-in w-9 h-9"
+            title="Clear text"
+          >
+            <X size={16} />
+          </button>
+        ) : (
+          <div className="w-9 h-9" />
+        )}
+      </div>
+    </div>
+  );
+}
