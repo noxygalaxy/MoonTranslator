@@ -50,6 +50,9 @@ jobs:
 
       - name: Build Tauri App
         run: pnpm tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Package Portable App
         shell: pwsh
@@ -69,12 +72,20 @@ jobs:
         run: |
           Copy-Item "installer\target\release\moontranslator_installer.exe" "MoonTranslator-Installer-${{ github.event.inputs.version }}.exe"
 
+      - name: Prepare Release Notes
+        shell: pwsh
+        run: |
+          $body = "${{ github.event.inputs.release_body }}" -replace '\\n', "`n"
+          "RELEASE_BODY<<EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+          $body | Out-File -FilePath $env:GITHUB_ENV -Append
+          "EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version }}
           name: ${{ github.event.inputs.release_title }}
-          body: ${{ github.event.inputs.release_body }}
+          body: ${{ env.RELEASE_BODY }}
           files: |
             MoonTranslator-App-${{ github.event.inputs.version }}-portable.zip
             MoonTranslator-Installer-${{ github.event.inputs.version }}.exe
