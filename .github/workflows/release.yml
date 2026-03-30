@@ -13,11 +13,6 @@ on:
         required: true
         type: string
         default: "New Release"
-      release_body:
-        description: "Release Notes / Changelog"
-        required: false
-        type: string
-        default: "Bug fixes and performance improvements."
 
 jobs:
   build-and-release:
@@ -72,13 +67,12 @@ jobs:
         run: |
           Copy-Item "installer\target\release\moontranslator_installer.exe" "MoonTranslator-Installer-${{ github.event.inputs.version }}.exe"
 
-      - name: Prepare Release Notes
+      - name: Read Release Notes
         shell: pwsh
         run: |
-          $body = "${{ github.event.inputs.release_body }}" -replace '\\n', "`n"
-          "RELEASE_BODY<<EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
-          $body | Out-File -FilePath $env:GITHUB_ENV -Append
-          "EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "RELEASE_BODY<<EOF" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Get-Content -Path "RELEASE_NOTES.md" -Raw | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "EOF" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
