@@ -16,6 +16,8 @@ pub struct TranslateRequest {
     pub to: String,
     pub api: ApiProvider,
     pub api_key: String,
+    #[serde(default)]
+    pub use_free_api: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -147,37 +149,23 @@ impl TranslationProvider for Deepl {
 
 // google
 
-#[derive(Deserialize)]
-struct GoogleResponse {
-    data: GoogleData,
-}
-
-#[derive(Deserialize)]
-struct GoogleData {
-    translations: Vec<GoogleTranslation>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct GoogleTranslation {
-    translated_text: String,
-    detected_source_language: Option<String>,
-}
-
 impl TranslationProvider for Google {
     async fn translate(
         client: &reqwest::Client,
         req: &TranslateRequest,
     ) -> Result<TranslateResponse, String> {
-        let mut body = serde_json::json!({ "q": req.text, "target": req.to, "format": "text" });
-        if req.from != "auto" {
-            body["source"] = serde_json::json!(req.from);
-        }
+        let sl = if req.from == "auto" { "auto" } else { &req.from };
 
         let response = client
-            .post("https://translation.googleapis.com/language/translate/v2")
-            .query(&[("key", &req.api_key)])
-            .json(&body)
+            .get("https://translate.googleapis.com/translate_a/single")
+            .query(&[
+                ("client", "gtx"),
+                ("sl", sl),
+                ("tl", &req.to),
+                ("dt", "t"),
+                ("dt", "bd"),
+                ("q", &req.text),
+            ])
             .send()
             .await
             .map_err(|e| format!("Google request failed: {}", e))?;
@@ -190,33 +178,35 @@ impl TranslationProvider for Google {
             ));
         }
 
-        let body: GoogleResponse = response
+        let body: serde_json::Value = response
             .json()
             .await
             .map_err(|e| format!("Failed to parse Google response: {}", e))?;
-        let translation = body
-            .data
-            .translations
-            .first()
+
+        let translated_text = body
+            .get(0)
+            .and_then(|arr| arr.as_array())
+            .map(|segments| {
+                segments
+                    .iter()
+                    .filter_map(|seg| seg.get(0).and_then(|t| t.as_str()))
+                    .collect::<String>()
+            })
             .ok_or("No translation found in Google response")?;
 
+        let detected_language = body
+            .get(2)
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_lowercase());
+
         Ok(TranslateResponse {
-            translated_text: translation.translated_text.clone(),
-            detected_language: translation
-                .detected_source_language
-                .as_ref()
-                .map(|s| s.to_lowercase()),
+            translated_text,
+            detected_language,
         })
     }
 
-    async fn validate(client: &reqwest::Client, api_key: &str) -> Result<bool, String> {
-        let response = client
-            .get("https://translation.googleapis.com/language/translate/v2/languages")
-            .query(&[("key", api_key), ("target", "en")])
-            .send()
-            .await
-            .map_err(|e| format!("Google validation failed: {}", e))?;
-        Ok(response.status().is_success())
+    async fn validate(_client: &reqwest::Client, _api_key: &str) -> Result<bool, String> {
+        Ok(true)
     }
 }
 
@@ -244,8 +234,18 @@ impl TranslationProvider for Bing {
         client: &reqwest::Client,
         req: &TranslateRequest,
     ) -> Result<TranslateResponse, String> {
+        let token = client
+            .get("https://edge.microsoft.com/translate/auth")
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0")
+            .send()
+            .await
+            .map_err(|e| format!("Failed to get Bing auth token: {}", e))?
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read Bing auth token: {}", e))?;
+
         let mut url = format!(
-            "https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to={}",
+            "https://api-edge.cognitive.microsofttranslator.com/translate?api-version=3.0&to={}",
             req.to
         );
         if req.from != "auto" {
@@ -254,7 +254,7 @@ impl TranslationProvider for Bing {
 
         let response = client
             .post(&url)
-            .header("Ocp-Apim-Subscription-Key", &req.api_key)
+            .header("Authorization", format!("Bearer {}", token.trim()))
             .header("Content-Type", "application/json")
             .json(&serde_json::json!([{"Text": req.text}]))
             .send()
@@ -288,14 +288,8 @@ impl TranslationProvider for Bing {
         })
     }
 
-    async fn validate(client: &reqwest::Client, api_key: &str) -> Result<bool, String> {
-        let response = client
-            .get("https://api.cognitive.microsofttranslator.com/languages?api-version=3.0")
-            .header("Ocp-Apim-Subscription-Key", api_key)
-            .send()
-            .await
-            .map_err(|e| format!("Bing validation failed: {}", e))?;
-        Ok(response.status().is_success())
+    async fn validate(_client: &reqwest::Client, _api_key: &str) -> Result<bool, String> {
+        Ok(true)
     }
 }
 

@@ -1,19 +1,15 @@
-First early release of MoonTranslator.
+**Additions:**
 
-**What works:**
+- **Free Translators:** Added support for Google and Bing translation without needing API keys.
+- **Language Swap:** Added button to instantly reverse languages directly in the popup (double Ctrl+C) window.
+- **Manual Editing:** Added the ability to manually edit output text before replacing/copying it in the popup window.
+- **Window Controls:** Added a close button to the main window.
+- **Build Optimized:** Significantly improved GitHub Actions build speeds by caching pnpm/cargo dependencies and reusing the custom installer binary if no changes were made to it.
 
-- Global popup translator (triggers instantly from anywhere on Windows)
-- Direct text-replacement via system clipboard interception
-- Support for DeepL, Google, Bing, Lara, and Custom API endpoints
-- Auto-detect source language and smart target language switching
-- Persistent settings and encrypted API key storage
+**Fixes:**
 
-**Setup:**
-You will need to supply your own API keys for the major providers. Go to Settings (via system tray or the popup widget) to add them. They are validated locally before saving.
-
-**Notes:**
-
-- **APIs:** DeepL and the Custom API endpoint have been tested extensively. Full disclosure, I haven't been able to fully verify the Google and Bing integrations because I don't currently have the budget for their paid tiers to test them. If you have keys for those and they break, please open an issue!
-- **Edge cases:** This is built on Tauri v2. Since the app does a lot of raw Windows system calls and clipboard hacking to make the "Replace" feature work, you might occasionally run into focus-stealing edge cases depending on the host application you are typing in.
-
-Please report any weird behavior or crashes on the issue tracker!
+- **Smart Positioning:** Fixed popup window getting cut off at screen edges (now stays fully visible).
+- **Popup Resizing:** Fixed structural and resizing issues for the popup window when interacting with dropdowns.
+- **API Key Prompts:** Fixed an issue where the popup window asked for an API key for a second time unnecessarily.
+- **Scrolling Behavior:** Fixed scrolling issues in the output translation field.
+- **Text State:** Fixed a bug where output text stubbornly remained visible after removing the source input text.

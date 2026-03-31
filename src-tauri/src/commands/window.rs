@@ -1,15 +1,59 @@
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
-use super::cursor::get_cursor_pos;
+use super::cursor::{get_caret_pos, get_cursor_pos, get_screen_bounds};
 
 const POPUP_WIDTH: f64 = 380.0;
 const POPUP_HEIGHT: f64 = 280.0;
-const CURSOR_OFFSET_X: i32 = 190;
-const CURSOR_OFFSET_Y: i32 = 240;
+
+const CARET_GAP: i32 = 8;
+const CARET_LINE_HEIGHT_ESTIMATE: i32 = 20;
 
 const PASTE_INIT_DELAY_MS: u64 = 300;
 const PASTE_MODIFIER_DELAY_MS: u64 = 20;
 const PASTE_KEY_HOLD_MS: u64 = 30;
+
+fn calculate_popup_position(_app: &AppHandle, has_text: bool) -> (i32, i32) {
+    if has_text {
+        if let Some((caret_x, caret_y)) = get_caret_pos() {
+            let bounds = get_screen_bounds(caret_x, caret_y);
+            let popup_w = (POPUP_WIDTH * bounds.scale_factor) as i32;
+            let popup_h = (POPUP_HEIGHT * bounds.scale_factor) as i32;
+
+            let mut x = caret_x - popup_w / 2;
+            x = x.max(bounds.left).min(bounds.right - popup_w);
+
+            let y_below = caret_y + CARET_GAP;
+            let y_above = caret_y - CARET_LINE_HEIGHT_ESTIMATE - CARET_GAP - popup_h;
+
+            let y = if y_below + popup_h <= bounds.bottom {
+                y_below
+            } else if y_above >= bounds.top {
+                y_above
+            } else {
+                bounds.bottom - popup_h
+            };
+
+            return (x, y);
+        }
+    }
+
+    let (mouse_x, mouse_y) = get_cursor_pos();
+    let bounds = get_screen_bounds(mouse_x, mouse_y);
+    let popup_w = (POPUP_WIDTH * bounds.scale_factor) as i32;
+    let popup_h = (POPUP_HEIGHT * bounds.scale_factor) as i32;
+
+    let mut x = mouse_x - popup_w / 2;
+    let mut y = mouse_y - popup_h - 10;
+
+    if y < bounds.top {
+        y = mouse_y + 20;
+    }
+
+    x = x.max(bounds.left).min(bounds.right - popup_w);
+    y = y.max(bounds.top).min(bounds.bottom - popup_h);
+
+    (x, y)
+}
 
 #[tauri::command]
 pub async fn open_popup_window(app: AppHandle) -> Result<(), String> {
@@ -21,24 +65,7 @@ pub async fn open_popup_window(app: AppHandle) -> Result<(), String> {
         .map(|s| !s.trim().is_empty())
         .unwrap_or(false);
 
-    let (target_x, target_y) = if has_text {
-        let (x, y) = get_cursor_pos();
-        (x - CURSOR_OFFSET_X, y - CURSOR_OFFSET_Y)
-    } else {
-        if let Some(monitor) = app.primary_monitor().ok().flatten() {
-            let size = monitor.size();
-            let scale = monitor.scale_factor();
-            let win_w = POPUP_WIDTH * scale;
-            let win_h = POPUP_HEIGHT * scale;
-            (
-                (size.width as f64 - win_w - 24.0) as i32,
-                (size.height as f64 - win_h - 64.0) as i32,
-            )
-        } else {
-            let (x, y) = get_cursor_pos();
-            (x - CURSOR_OFFSET_X, y - CURSOR_OFFSET_Y)
-        }
-    };
+    let (target_x, target_y) = calculate_popup_position(&app, has_text);
 
     if let Some(popup) = app.get_webview_window("popup") {
         let _ = popup

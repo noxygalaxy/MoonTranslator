@@ -16,8 +16,8 @@ struct CtrlCState {
 const DOUBLE_PRESS_TIMEOUT_MS: u128 = 500;
 const POPUP_WIDTH: f64 = 380.0;
 const POPUP_HEIGHT: f64 = 280.0;
-const CURSOR_OFFSET_X: i32 = 190;
-const CURSOR_OFFSET_Y: i32 = 240;
+const CARET_GAP: i32 = 8;
+const CARET_LINE_HEIGHT_ESTIMATE: i32 = 20;
 
 fn show_and_focus_window(app: &AppHandle, label: &str) {
     if let Some(window) = app.get_webview_window(label) {
@@ -183,6 +183,12 @@ fn setup_global_shortcut(app: &AppHandle) -> Result<(), Box<dyn std::error::Erro
                             }
                         });
                     }
+                } else {
+                    if let Some(state_mutex) = app_handle.try_state::<Mutex<CtrlCState>>() {
+                        if let Ok(mut state) = state_mutex.lock() {
+                            state.last_press = None;
+                        }
+                    }
                 }
             }
             _ => {}
@@ -195,14 +201,49 @@ fn setup_global_shortcut(app: &AppHandle) -> Result<(), Box<dyn std::error::Erro
 }
 
 async fn open_popup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let (x, y) = commands::cursor::get_cursor_pos();
+    let (target_x, target_y) = if let Some((caret_x, caret_y)) = commands::cursor::get_caret_pos()
+    {
+        let bounds = commands::cursor::get_screen_bounds(caret_x, caret_y);
+        let popup_w = (POPUP_WIDTH * bounds.scale_factor) as i32;
+        let popup_h = (POPUP_HEIGHT * bounds.scale_factor) as i32;
+
+        let mut x = caret_x - popup_w / 2;
+        x = x.max(bounds.left).min(bounds.right - popup_w);
+
+        let y_below = caret_y + CARET_GAP;
+        let y_above = caret_y - CARET_LINE_HEIGHT_ESTIMATE - CARET_GAP - popup_h;
+
+        let y = if y_below + popup_h <= bounds.bottom {
+            y_below
+        } else if y_above >= bounds.top {
+            y_above
+        } else {
+            bounds.bottom - popup_h
+        };
+
+        (x, y)
+    } else {
+        let (mouse_x, mouse_y) = commands::cursor::get_cursor_pos();
+        let bounds = commands::cursor::get_screen_bounds(mouse_x, mouse_y);
+        let popup_w = (POPUP_WIDTH * bounds.scale_factor) as i32;
+        let popup_h = (POPUP_HEIGHT * bounds.scale_factor) as i32;
+
+        let mut x = mouse_x - popup_w / 2;
+        let mut y = mouse_y - popup_h - 10;
+
+        if y < bounds.top {
+            y = mouse_y + 20;
+        }
+
+        x = x.max(bounds.left).min(bounds.right - popup_w);
+        y = y.max(bounds.top).min(bounds.bottom - popup_h);
+
+        (x, y)
+    };
 
     if let Some(popup) = app.get_webview_window("popup") {
         let _ = popup
-            .set_position(tauri::PhysicalPosition::new(
-                x - CURSOR_OFFSET_X,
-                y - CURSOR_OFFSET_Y,
-            ))
+            .set_position(tauri::PhysicalPosition::new(target_x, target_y))
             .inspect_err(|e| log::warn!("Failed to position popup: {e}"));
         let _ = popup
             .show()
@@ -220,7 +261,7 @@ async fn open_popup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
         .title("")
         .inner_size(POPUP_WIDTH, POPUP_HEIGHT)
         .min_inner_size(320.0, 180.0)
-        .position((x - CURSOR_OFFSET_X) as f64, (y - CURSOR_OFFSET_Y) as f64)
+        .position(target_x as f64, target_y as f64)
         .decorations(false)
         .always_on_top(true)
         .skip_taskbar(true)

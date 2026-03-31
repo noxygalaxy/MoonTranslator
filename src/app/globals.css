@@ -568,8 +568,15 @@ select option {
   gap: 4px;
   height: 20px;
   padding: 0 8px;
-  border-radius: 4px;
+  border-radius: var(--md-shape-full);
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.04em;
+}
+
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  width: 0;
+  height: 0;
 }

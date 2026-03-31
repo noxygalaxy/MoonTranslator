@@ -24,21 +24,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
           version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+            installer -> target
 
       - name: Install frontend dependencies
         run: pnpm install
@@ -57,7 +62,15 @@ jobs:
           Copy-Item "public\icon.ico" "MoonTranslator_Portable\"
           Compress-Archive -Path "MoonTranslator_Portable\*" -DestinationPath "MoonTranslator-App-${{ github.event.inputs.version }}-portable.zip"
 
+      - name: Cache Custom Installer Binary
+        id: cache-installer
+        uses: actions/cache@v4
+        with:
+          path: installer/target/release/moontranslator_installer.exe
+          key: ${{ runner.os }}-installer-bin-${{ hashFiles('installer/src/**', 'installer/Cargo.*') }}
+
       - name: Build Custom Installer
+        if: steps.cache-installer.outputs.cache-hit != 'true'
         run: |
           cd installer
           cargo build --release

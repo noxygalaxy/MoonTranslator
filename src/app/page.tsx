@@ -9,7 +9,7 @@ import TranslatorOutput from "@/components/TranslatorOutput";
 import LanguageSelector from "@/components/LanguageSelector";
 import SettingsPanel from "@/components/SettingsPanel";
 import UpdateBanner from "@/components/UpdateBanner";
-import { ArrowRightLeft, Settings, TriangleAlert, Zap, ZapOff } from "lucide-react";
+import { ArrowRightLeft, Settings, TriangleAlert, Zap, ZapOff, X } from "lucide-react";
 import Image from "next/image";
 
 export default function Home() {
@@ -30,7 +30,7 @@ export default function Home() {
     swapLanguages,
   } = useTranslatorStore();
 
-  const { setSettingsOpen, apiKeys, loadFromStore, activeApi: settingsActiveApi } =
+  const { setSettingsOpen, apiKeys, loadFromStore, activeApi: settingsActiveApi, providerModes } =
     useSettingsStore();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -65,7 +65,10 @@ export default function Home() {
     }
 
     const apiKey = settingsState.apiKeys[state.activeApi];
-    if (!apiKey) {
+    const mode = settingsState.providerModes[state.activeApi];
+    const isFree = state.activeApi === "google" || state.activeApi === "bing" || mode === "web";
+
+    if (!apiKey && !isFree) {
       setError(`No API key set for ${API_PROVIDERS.find((p) => p.id === state.activeApi)?.name}. Go to Settings to add one.`);
       return;
     }
@@ -79,7 +82,8 @@ export default function Home() {
         state.sourceLang,
         state.targetLang,
         state.activeApi,
-        apiKey
+        apiKey,
+        isFree
       );
       setTranslatedText(result.translatedText);
       if (result.detectedLanguage) {
@@ -101,6 +105,12 @@ export default function Home() {
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceText, sourceLang, targetLang, activeApi, autoTranslate]);
+  useEffect(() => {
+    if (!sourceText.trim()) {
+      setTranslatedText("");
+      setError(null);
+    }
+  }, [sourceText, setTranslatedText, setError]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -201,6 +211,21 @@ export default function Home() {
           >
             <Settings size={22} />
           </button>
+
+          <button
+            onClick={async () => {
+              try {
+                const { getCurrentWindow } = await import("@tauri-apps/api/window");
+                await getCurrentWindow().hide();
+              } catch {
+                window.close();
+              }
+            }}
+            className="md-icon-btn state-layer"
+            title="Close to tray"
+          >
+            <X size={22} />
+          </button>
         </div>
       </header>
 
@@ -272,7 +297,7 @@ export default function Home() {
           {isTranslating ? "Translating..." : "Ready"} — Ctrl+Enter to translate
         </span>
         <span>
-          {!apiKeys[activeApi] && (
+          {!apiKeys[activeApi] && activeApi !== "google" && activeApi !== "bing" && providerModes[activeApi] !== "web" && (
             <span className="text-xs flex items-center gap-1.5 text-error">
               <TriangleAlert size={16} /> No API key —{" "}
               <button

@@ -127,6 +127,8 @@ export default function SettingsPanel() {
     }
   }, []);
 
+  const alwaysFreeProviders = ["google", "bing"];
+
   return (
     <>
       <div
@@ -165,6 +167,9 @@ export default function SettingsPanel() {
               {API_PROVIDERS.map((provider) => {
                 const isActive = activeApi === provider.id;
                 const hasKey = !!apiKeys[provider.id];
+                const isAlwaysFree = alwaysFreeProviders.includes(provider.id);
+                const isWebMode = isAlwaysFree;
+
                 return (
                   <div
                     key={provider.id}
@@ -188,7 +193,18 @@ export default function SettingsPanel() {
                         <span className="text-[13px] font-medium">{provider.name}</span>
                       </div>
 
-                      {hasKey && (
+                      {isAlwaysFree ? (
+                        <span
+                          className="md-badge"
+                          style={{
+                            background: "var(--md-tertiary-container)",
+                            color: "var(--md-on-tertiary-container)",
+                          }}
+                        >
+                          <Check size={10} />
+                          Free
+                        </span>
+                      ) : hasKey ? (
                         <span
                           className="md-badge"
                           style={{
@@ -199,9 +215,10 @@ export default function SettingsPanel() {
                           <Check size={10} />
                           Key set
                         </span>
-                      )}
+                      ) : null}
                     </button>
 
+                    {!isWebMode && (
                     <div
                       className="px-3 pb-2.5"
                       style={{
@@ -277,6 +294,7 @@ export default function SettingsPanel() {
                         </p>
                       )}
                     </div>
+                    )}
                   </div>
                 );
               })}
@@ -355,7 +373,7 @@ export default function SettingsPanel() {
           </section>
 
           <div className="pt-4 text-center text-xs font-mono border-t border-(--md-outline-variant) text-secondary tracking-widest">
-            MoonTranslator v0.1.0
+            MoonTranslator v0.1.1
           </div>
         </div>
       </div>

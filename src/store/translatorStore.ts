@@ -82,7 +82,7 @@ export const useTranslatorStore = create<TranslatorState>((set, get) => ({
   error: null,
   detectedLanguage: null,
   autoTranslate: true,
-  activeApi: "deepl",
+  activeApi: "google",
   charCount: 0,
   wordCount: 0,
 

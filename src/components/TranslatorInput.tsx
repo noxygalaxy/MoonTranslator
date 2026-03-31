@@ -5,7 +5,7 @@ import { useRef, useEffect } from "react";
 import { X } from "lucide-react";
 
 export default function TranslatorInput() {
-  const { sourceText, setSourceText, charCount, wordCount } =
+  const { sourceText, setSourceText, charCount, wordCount, clearAll } =
     useTranslatorStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -40,6 +40,7 @@ export default function TranslatorInput() {
         </div>
         {sourceText ? (
           <button
+            onClick={() => clearAll()}
             className="md-icon-btn state-layer animate-fade-in w-9 h-9"
             title="Clear text"
           >

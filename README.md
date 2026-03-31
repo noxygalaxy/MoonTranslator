@@ -25,9 +25,10 @@ It uses a sleek Material Design 3 interface, lives quietly in your system tray, 
 
 ## ✨ Why use it?
 
-- **Bring Your Own API:** Plug in your keys for DeepL, Google Translate, Microsoft Bing, Lara Translate—or even hit up your own custom API URL!
-- **The "Magic" Popup:** Highlight text anywhere on your PC (Discord, Word, a browser), double-tap `Ctrl+C`, and a mini translator pops right up next to your mouse pointer.
-- **Quick Replace:** Once you translate something in the floating popup, hit "Replace", and it instantly types the translation back into your document.
+- **Out of the Box Translation:** Built-in free-tier support for Google Translate and Microsoft Bing without needing any API keys. Or, plug in your own keys for DeepL, Lara Translate, or custom URLs!
+- **The "Magic" Popup:** Highlight text anywhere on your PC (Discord, Word, a browser), double-tap `Ctrl+C`, and a mini translator pops right up.
+- **Edit & Quick Replace:** Once you translate something in the floating popup, you can manually edit the output. Then, just hit "Replace" and it instantly types the translation back into your document!
+- **Instant Language Swap:** Easily reverse the target and source languages with a single button press.
 - **Beautiful & Fluid:** Complete with a gorgeous dark/light theme, micro-animations, and smooth window transitions.
 - **Auto-Detect & Auto-Translate:** Just paste or type. It figures out the language and translates as you go.
 
@@ -48,7 +49,7 @@ The backend powerhouse driving the window management, global shortcuts, clipboar
 
 ## 🔑 How to get API Keys
 
-Since MoonTranslator interfaces with third-party providers directly, you'll need to generate your own personal API key for the platform you want to use. Here's a quick guide on where to find them (all major providers offer a generous Free Tier)!
+Since MoonTranslator natively supports free built-in translation via Google and Bing, no keys are required to start translating! However, if you want to use DeepL, Lara Translate, or your own official cloud accounts, you'll need to generate a personal API key. Here's a quick guide on where to find them (all major providers offer a generous Free Tier)!
 
 ### <img src=".github/_assets/deepl.webp" width="24" /> DeepL (Recommended)
 
@@ -58,7 +59,7 @@ DeepL provides incredibly accurate, natural-sounding translations. Their free ti
 2. Select **DeepL API Free** and create an account.
 3. Once logged in, navigate to the **API keys** tab under your Account summary and copy your new Authentication Key.
 
-### <img src=".github/_assets/google.webp" width="24" /> Google Cloud Translation
+### <img src=".github/_assets/google.webp" width="24" /> Google Cloud Translation (Optional)
 
 1. Head to the [Google Cloud Console](https://console.cloud.google.com/).
 2. Create a new project.
@@ -66,7 +67,7 @@ DeepL provides incredibly accurate, natural-sounding translations. Their free ti
 4. Go to **APIs & Services** > **Credentials**.
 5. Click **Create Credentials** -> **API key** and copy the generated key.
 
-### <img src=".github/_assets/bing.webp" width="24" /> Microsoft Bing (Azure Translator)
+### <img src=".github/_assets/bing.webp" width="24" /> Microsoft Bing (Azure Translator) - Optional
 
 1. Go to the [Azure Portal](https://portal.azure.com/).
 2. Search for **Translator** in the top bar and click **Create** to launch a new resource.

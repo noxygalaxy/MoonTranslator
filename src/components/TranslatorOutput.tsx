@@ -33,7 +33,7 @@ export default function TranslatorOutput() {
       className="flex flex-col flex-1 min-h-0"
       style={{ background: "transparent" }}
     >
-      <div className="flex-1 px-6 py-5 min-h-30 relative">
+      <div className="flex-1 px-6 py-5 min-h-30 overflow-y-auto relative">
         {isTranslating ? (
           <div className="flex flex-col gap-3 animate-fade-in">
             <div className="skeleton h-4 w-full" />
@@ -43,7 +43,7 @@ export default function TranslatorOutput() {
         ) : error ? (
           <div className="flex flex-col gap-3 p-4 text-sm animate-fade-in bg-error-container text-error rounded-(--md-shape-md) border border-error/20">
             <div className="flex items-start gap-3">
-              <TriangleAlert size={16} />
+              <TriangleAlert size={18} className="shrink-0 mt-0.5" />
               <span className="leading-snug wrap-break-word">{error}</span>
             </div>
             <div className="mt-1 pl-7">

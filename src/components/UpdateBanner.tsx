@@ -46,7 +46,7 @@ export default function UpdateBanner() {
       if (result.status === 200) {
         const release = JSON.parse(result.body);
         const latestVersion = release.tag_name?.replace("v", "") || "";
-        const currentVersion = "0.1.0";
+        const currentVersion = "0.1.1";
 
         if (latestVersion && latestVersion !== currentVersion) {
           setNewVersion(latestVersion);
@@ -81,7 +81,7 @@ export default function UpdateBanner() {
 
   return (
     <div
-      className="toast-enter flex items-center justify-between gap-3 px-5 py-3 shrink-0 bg-inverse-surface text-inverse-on-surface"
+      className="toast-enter flex items-center justify-between gap-3 px-5 py-3 shrink-0 rounded-(--md-shape-md) bg-surface-high"
     >
       <div className="flex items-center gap-3 text-sm">
         <Download size={16} />
@@ -94,7 +94,7 @@ export default function UpdateBanner() {
         <button
           onClick={handleUpdate}
           disabled={updating}
-          className="text-sm font-medium px-4 py-1.5 rounded-full transition-opacity disabled:opacity-50 bg-(--md-inverse-primary) text-on-primary"
+          className="text-sm cursor-pointer font-medium px-4 py-1.5 rounded-full transition-opacity disabled:opacity-50 bg-(--md-inverse-primary) text-(--md-inverse-on-primary)"
         >
           {updating ? "Updating..." : "Install"}
         </button>

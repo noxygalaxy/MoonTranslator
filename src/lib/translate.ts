@@ -11,17 +11,21 @@ export async function translateText(
   from: string,
   to: string,
   api: ApiProvider,
-  apiKey: string
+  apiKey: string,
+  useFreeApi: boolean = false
 ): Promise<TranslationResult> {
   if (!text.trim()) {
     return { translatedText: "", detectedLanguage: null };
   }
 
-  if (!apiKey) {
+  const isFree =
+    api === "google" || api === "bing" || useFreeApi;
+
+  if (!apiKey && !isFree) {
     throw new Error(`No API key set for ${api}. Please add one in Settings.`);
   }
 
-  if (api === "lara") {
+  if (api === "lara" && !useFreeApi) {
     const parts = apiKey.split(/[:,]/);
     if (parts.length < 2) {
       throw new Error(
@@ -85,7 +89,7 @@ export async function translateText(
       translated_text: string;
       detected_language: string | null;
     }>("translate_text", {
-      request: { text, from, to, api, api_key: apiKey },
+      request: { text, from, to, api, api_key: apiKey, use_free_api: useFreeApi },
     });
 
     return {
@@ -103,6 +107,10 @@ export async function validateApiKey(
   api: ApiProvider,
   apiKey: string
 ): Promise<boolean> {
+  if (api === "google" || api === "bing") {
+    return true;
+  }
+
   if (api === "lara") {
     const parts = apiKey.split(/[:,]/);
     if (parts.length < 2) return false;

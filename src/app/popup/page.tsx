@@ -3,7 +3,7 @@
 import { useEffect, useCallback, useState, useRef } from "react";
 import { usePopupStore } from "@/store/popupStore";
 import { useSettingsStore } from "@/store/settingsStore";
-import { API_PROVIDERS } from "@/store/translatorStore";
+import { API_PROVIDERS, useTranslatorStore } from "@/store/translatorStore";
 import type { ApiProvider } from "@/store/translatorStore";
 import {
   translateText,
@@ -12,6 +12,7 @@ import {
   getSmartTargetLang,
 } from "@/lib/translate";
 import LanguageSelector from "@/components/LanguageSelector";
+import DropdownPortal from "@/components/DropdownPortal";
 import {
   X,
   GripHorizontal,
@@ -23,6 +24,7 @@ import {
   ChevronUp,
   TriangleAlert,
   ArrowRightLeft,
+  Pencil,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -46,35 +48,57 @@ export default function PopupPage() {
     setShowKeyInput,
     setKeyInputValue,
     setKeySaveStatus,
+    reset,
   } = usePopupStore();
 
   const { activeApi, setActiveApi, loadFromStore, setApiKey, saveToStore } =
     useSettingsStore();
 
   const [copied, setCopied] = useState(false);
-  const [selectedApi, setSelectedApi] = useState<ApiProvider>(activeApi);
   const [isTranslatorSelectOpen, setIsTranslatorSelectOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
   const initRef = useRef(false);
   const translatorSelectRef = useRef<HTMLDivElement>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const translatorBtnRef = useRef<HTMLButtonElement>(null);
+  const translatorPortalRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (translatorSelectRef.current && !translatorSelectRef.current.contains(event.target as Node)) {
-        setIsTranslatorSelectOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const isFreeMode =
+    activeApi === "google" ||
+    activeApi === "bing";
 
   const handleDropdownOpen = useCallback(async (isOpen: boolean) => {
     try {
       const { getCurrentWindow, LogicalSize } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().setSize(new LogicalSize(380, isOpen ? 560 : 280));
+      await getCurrentWindow().setSize(new LogicalSize(380, isOpen ? 620 : 280));
     } catch {
       
     }
   }, []);
+
+  const handleTranslatorDropdownOpen = useCallback(async (isOpen: boolean) => {
+    try {
+      const { getCurrentWindow, LogicalSize } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().setSize(new LogicalSize(380, isOpen ? 480 : 280));
+    } catch {
+      
+    }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      const insideToggle = translatorSelectRef.current?.contains(target);
+      const insidePortal = translatorPortalRef.current?.contains(target);
+      if (!insideToggle && !insidePortal) {
+        setIsTranslatorSelectOpen(false);
+        handleTranslatorDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [handleTranslatorDropdownOpen]);
 
   const readClipboard = useCallback(async () => {
     try {
@@ -83,6 +107,10 @@ export default function PopupPage() {
       );
       const text = await readText();
       if (text) {
+        setTranslatedText("");
+        setError(null);
+        setIsEditing(false);
+        
         setClipboardText(text);
 
         const detected = detectLanguageSimple(text);
@@ -101,7 +129,7 @@ export default function PopupPage() {
     } catch {
       setClipboardText("(Could not read clipboard)");
     }
-  }, [setClipboardText, setSourceLang, setTargetLang]);
+  }, [setClipboardText, setSourceLang, setTargetLang, setTranslatedText, setError, setIsEditing]);
 
   useEffect(() => {
     if (initRef.current) return;
@@ -119,6 +147,8 @@ export default function PopupPage() {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         const win = getCurrentWindow();
         unlisten = await win.listen("popup-refresh", () => {
+          reset();
+          setIsEditing(false);
           readClipboard();
         });
       } catch {}
@@ -127,21 +157,18 @@ export default function PopupPage() {
     return () => {
       if (unlisten) unlisten();
     };
-  }, [loadFromStore, readClipboard]);
-
-  useEffect(() => {
-    setSelectedApi(activeApi);
-  }, [activeApi]);
+  }, [loadFromStore, readClipboard, reset]);
 
   const doTranslate = useCallback(async () => {
     const text = usePopupStore.getState().clipboardText;
     if (!text.trim() || text === "(Could not read clipboard)") return;
 
     const settingsState = useSettingsStore.getState();
-    const api = selectedApi;
+    const api = settingsState.activeApi;
     const apiKey = settingsState.apiKeys[api];
+    const isFree = api === "google" || api === "bing";
 
-    if (!apiKey) {
+    if (!apiKey && !isFree) {
       setError(
         `No API key for ${API_PROVIDERS.find((p) => p.id === api)?.name}`
       );
@@ -150,6 +177,7 @@ export default function PopupPage() {
 
     setIsTranslating(true);
     setError(null);
+    setIsEditing(false);
 
     try {
       const result = await translateText(
@@ -157,7 +185,8 @@ export default function PopupPage() {
         usePopupStore.getState().sourceLang,
         usePopupStore.getState().targetLang,
         api,
-        apiKey
+        apiKey,
+        isFree
       );
       setTranslatedText(result.translatedText);
     } catch (e) {
@@ -165,26 +194,27 @@ export default function PopupPage() {
     } finally {
       setIsTranslating(false);
     }
-  }, [selectedApi, setTranslatedText, setIsTranslating, setError]);
+  }, [setTranslatedText, setIsTranslating, setError]);
 
   useEffect(() => {
     if (clipboardText && clipboardText !== "(Could not read clipboard)") {
       doTranslate();
     }
-  }, [clipboardText, sourceLang, targetLang, selectedApi, doTranslate]);
+  }, [clipboardText, sourceLang, targetLang, activeApi, doTranslate]);
 
   const handleCopy = async () => {
-    if (!translatedText) return;
+    const textToCopy = isEditing ? editText : translatedText;
+    if (!textToCopy) return;
     try {
       const { writeText } = await import(
         "@tauri-apps/plugin-clipboard-manager"
       );
-      await writeText(translatedText);
+      await writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       try {
-        await navigator.clipboard.writeText(translatedText);
+        await navigator.clipboard.writeText(textToCopy);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
@@ -194,9 +224,15 @@ export default function PopupPage() {
   };
 
   const handleReplace = async () => {
-    if (!translatedText) return;
+    const textToReplace = isEditing ? editText : translatedText;
+    if (!textToReplace) return;
     try {
-      await handleCopy();
+      try {
+        const { writeText } = await import("@tauri-apps/plugin-clipboard-manager");
+        await writeText(textToReplace);
+      } catch {
+        await navigator.clipboard.writeText(textToReplace);
+      }
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("close_popup_window");
       await invoke("simulate_paste");
@@ -238,10 +274,10 @@ export default function PopupPage() {
     if (!keyInputValue.trim()) return;
 
     setKeySaveStatus("saving");
-    const isValid = await validateApiKey(selectedApi, keyInputValue);
+    const isValid = await validateApiKey(activeApi, keyInputValue);
 
     if (isValid) {
-      setApiKey(selectedApi, keyInputValue);
+      setApiKey(activeApi, keyInputValue);
       await saveToStore();
       setKeySaveStatus("success");
       setTimeout(() => {
@@ -256,9 +292,18 @@ export default function PopupPage() {
     }
   };
 
+  const handleStartEdit = () => {
+    setEditText(translatedText);
+    setIsEditing(true);
+    setTimeout(() => {
+      editTextareaRef.current?.focus();
+    }, 50);
+  };
+
   return (
     <div
-      className="flex flex-col select-none relative bg-surface text-foreground rounded-(--md-shape-lg) h-70"
+      className="flex flex-col select-none relative bg-surface text-foreground rounded-(--md-shape-lg) overflow-visible"
+      style={{ height: "100vh", minHeight: 0 }}
     >
       <div
         data-tauri-drag-region
@@ -287,7 +332,8 @@ export default function PopupPage() {
       </div>
 
       <div
-        className="flex items-center gap-2 px-4 py-2.5 shrink-0 border-b border-(--md-outline-variant)"
+        className="flex items-center gap-2 px-4 py-2.5 shrink-0 border-b border-(--md-outline-variant) relative"
+        style={{ zIndex: 30 }}
       >
         <div className="flex-1">
           <LanguageSelector
@@ -301,7 +347,19 @@ export default function PopupPage() {
             onOpenChange={handleDropdownOpen}
           />
         </div>
-        <ArrowRight size={14} className="text-primary shrink-0" />
+        <button
+          onClick={() => {
+            const temp = sourceLang;
+            setSourceLang(targetLang);
+            setTargetLang(temp);
+            saveLangPref("popupSourceLang", targetLang);
+            saveLangPref("popupTargetLang", temp);
+          }}
+          className="md-icon-btn w-7 h-7 shrink-0"
+          title="Swap languages"
+        >
+          <ArrowRightLeft size={14} />
+        </button>
         <div className="flex-1">
           <LanguageSelector
             value={targetLang}
@@ -325,7 +383,7 @@ export default function PopupPage() {
         </p>
       </div>
 
-      <div className="flex-1 px-4 py-3 overflow-y-auto min-h-10">
+      <div className="flex-1 px-4 py-3 overflow-y-auto min-h-0">
         {isTranslating ? (
           <div className="flex flex-col gap-2">
             <div className="skeleton h-3.5 w-full" />
@@ -336,7 +394,7 @@ export default function PopupPage() {
             className="flex flex-col gap-2 p-3 text-xs bg-error-container text-error rounded-(--md-shape-sm) border border-error/20"
           >
             <div className="flex items-start gap-2">
-              <TriangleAlert size={16} />
+              <TriangleAlert size={16} className="shrink-0 mt-0.5" />
               <span className="leading-snug wrap-break-word">{error}</span>
             </div>
             <div className="pl-5">
@@ -350,16 +408,34 @@ export default function PopupPage() {
               </a>
             </div>
           </div>
+        ) : isEditing ? (
+          <textarea
+            ref={editTextareaRef}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            className="w-full h-full leading-snug text-[13px] text-foreground bg-transparent border-none outline-none resize-none"
+          />
         ) : (
-          <p
-            className="leading-snug text-[13px] text-foreground"
-          >
-            {translatedText}
-          </p>
+          <div className="flex items-start gap-2">
+            <p
+              className="leading-snug text-[13px] text-foreground flex-1"
+            >
+              {translatedText}
+            </p>
+            {translatedText && (
+              <button
+                onClick={handleStartEdit}
+                className="md-icon-btn w-6 h-6 shrink-0 mt-px"
+                title="Edit translation"
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
-      {showKeyInput && (
+      {showKeyInput && !isFreeMode && (
         <div
           className="px-4 py-2.5 shrink-0 bg-surface-high border-t border-(--md-outline-variant)"
         >
@@ -368,9 +444,10 @@ export default function PopupPage() {
               type="password"
               value={keyInputValue}
               onChange={(e) => setKeyInputValue(e.target.value)}
-              placeholder={selectedApi === "lara" ? "ID,Secret" : "Enter API key..."}
+              placeholder={activeApi === "lara" ? "ID,Secret" : "Enter API key..."}
               className="flex-1 text-xs focus:outline-none bg-surface-highest text-foreground border border-(--md-outline-variant) rounded-(--md-shape-sm) px-3 py-2"
               autoFocus
+              data-form-type="other"
             />
             <button
               onClick={handleSaveKey}
@@ -402,67 +479,101 @@ export default function PopupPage() {
       )}
 
       <div
-        className="flex items-center justify-between px-4 py-2 shrink-0 bg-surface-high border-t border-(--md-outline-variant) rounded-b-(--md-shape-lg)"
+        className="flex items-center justify-between px-4 py-2 shrink-0 bg-surface-high border-t border-(--md-outline-variant) rounded-b-(--md-shape-lg) overflow-visible"
       >
         <div className="flex items-center gap-2">
-          <div ref={translatorSelectRef} className="relative z-50">
+          <div ref={translatorSelectRef} className="relative">
             <button
-              onClick={() => setIsTranslatorSelectOpen(!isTranslatorSelectOpen)}
+              ref={translatorBtnRef}
+              onClick={() => {
+                const newState = !isTranslatorSelectOpen;
+                setIsTranslatorSelectOpen(newState);
+                handleTranslatorDropdownOpen(newState);
+              }}
               className="flex items-center justify-between font-medium outline-none state-layer gap-2 cursor-pointer bg-surface-high text-secondary border border-(--md-outline-variant) rounded-(--md-shape-sm) py-1.5 pl-3 pr-2 text-xs transition-all"
             >
-              <span>{API_PROVIDERS.find(p => p.id === selectedApi)?.name || "Select API"}</span>
+              <span>
+                {API_PROVIDERS.find((p) => p.id === activeApi)?.name || "Select API"}
+              </span>
               <ChevronUp
                 size={14}
-                className={`text-secondary transition-transform duration-200 ${isTranslatorSelectOpen ? "rotate-180" : "rotate-0"}`}
+                className={`text-secondary transition-transform duration-200 ${
+                  isTranslatorSelectOpen ? "rotate-0" : "rotate-180"
+                }`}
               />
             </button>
-            <div
-              className={`absolute bottom-full left-0 mb-1 w-36 overflow-hidden shadow-xl transition-all duration-200 ease-out origin-bottom border border-(--md-outline-variant) bg-surface-highest rounded-(--md-shape-md) ${isTranslatorSelectOpen ? "max-h-50 opacity-100 pointer-events-auto" : "max-h-0 opacity-0 pointer-events-none"}`}
-            >
-              <div className="flex flex-col py-1 px-1">
-                {API_PROVIDERS.map((p) => {
-                  const isSelected = selectedApi === p.id;
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={async () => {
-                        setSelectedApi(p.id);
-                        setActiveApi(p.id);
-                        await saveToStore();
-                        setIsTranslatorSelectOpen(false);
-                      }}
-                      className={`flex items-center justify-between px-3 py-2 mb-0.5 rounded-full text-left w-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-xs ${isSelected ? "text-primary font-semibold" : "text-foreground font-normal"}`}
-                    >
-                      {p.name}
-                      {isSelected && <Check size={14} className="text-primary" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
 
-          <button
-            onClick={() => setShowKeyInput(!showKeyInput)}
-            className="md-icon-btn w-7 h-7"
-          >
-            <Key size={12} />
-          </button>
+            <DropdownPortal
+              anchorRef={translatorBtnRef}
+              isOpen={isTranslatorSelectOpen}
+              minWidth={144}
+            >
+              <div ref={translatorPortalRef}>
+                <div
+                  className={`overflow-hidden shadow-xl transition-all duration-200 ease-out origin-bottom border border-(--md-outline-variant) bg-surface-highest rounded-(--md-shape-md) ${
+                    isTranslatorSelectOpen
+                      ? "max-h-50 opacity-100 pointer-events-auto"
+                      : "max-h-0 opacity-0 pointer-events-none"
+                  }`}
+                >
+                  <div className="flex flex-col py-1 px-1">
+                    {API_PROVIDERS.map((p) => {
+                      const isSelected = activeApi === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={async () => {
+                            useTranslatorStore.getState().setActiveApi(p.id);
+                            setActiveApi(p.id);
+                            await saveToStore();
+                            setIsTranslatorSelectOpen(false);
+                            handleTranslatorDropdownOpen(false);
+                          }}
+                          className={`flex items-center justify-between px-3 py-2 mb-0.5 rounded-full text-left w-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-xs ${
+                            isSelected
+                              ? "text-primary font-semibold"
+                              : "text-foreground font-normal"
+                          }`}
+                        >
+                          {p.name}
+                          {isSelected && <Check size={14} className="text-primary" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </DropdownPortal>
+          </div>
+          
+          {!isFreeMode && (
+            <button
+              onClick={() => setShowKeyInput(!showKeyInput)}
+              className="md-icon-btn w-7 h-7"
+            >
+              <Key size={12} />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleReplace}
-            disabled={!translatedText}
-            className={`md-chip h-7 px-3 text-[11px] ${!translatedText ? "opacity-38" : ""}`}
+            disabled={!translatedText && !editText}
+            className={`md-chip h-7 px-3 text-[11px] ${!translatedText && !editText ? "opacity-38" : ""}`}
           >
             <ArrowRightLeft size={12} />
             Replace
           </button>
           <button
             onClick={handleCopy}
-            disabled={!translatedText}
-            className={`md-chip h-7 px-3 text-[11px] ${!translatedText ? "opacity-38" : ""} ${copied ? "bg-primary-container text-on-primary-container border-transparent" : ""}`}
+            disabled={!translatedText && !editText}
+            className={`md-chip h-7 px-3 text-[11px] ${!translatedText && !editText ? "opacity-38" : ""}`}
+            style={copied ? {
+              background: "var(--md-primary-container)",
+              color: "var(--md-on-primary-container)",
+              borderColor: "transparent",
+            } : undefined}
           >
             {copied ? <Check size={12} /> : <Copy size={12} />}
             {copied ? "Copied" : "Copy"}
