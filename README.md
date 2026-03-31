@@ -23,6 +23,8 @@ I wanted a translation app that just _worked_ without feeling clunky or taking u
 
 It uses a sleek Material Design 3 interface, lives quietly in your system tray, and pops up exactly when you need it. Plus, since it's built with Rust and Tauri, it uses barely any memory on your PC.
 
+**Note:** _Inspired by [DeepL App](https://www.deepl.com/windows-app)._
+
 ## ✨ Why use it?
 
 - **Out of the Box Translation:** Built-in free-tier support for Google Translate and Microsoft Bing without needing any API keys. Or, plug in your own keys for DeepL, Lara Translate, or custom URLs!
