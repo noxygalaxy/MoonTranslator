@@ -78,7 +78,7 @@ jobs:
       - name: Package Custom Installer
         shell: pwsh
         run: |
-          Copy-Item "installer\target\release\moontranslator_installer.exe" "MoonTranslator-Installer-${{ github.event.inputs.version }}.exe"
+          Copy-Item "installer\target\release\moontranslator_installer.exe" "MoonTranslator-Installer.exe"
 
       - name: Read Release Notes
         shell: pwsh
@@ -95,7 +95,7 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           files: |
             MoonTranslator-App-${{ github.event.inputs.version }}-portable.zip
-            MoonTranslator-Installer-${{ github.event.inputs.version }}.exe
+            MoonTranslator-Installer.exe
           draft: false
           prerelease: false
         env:
