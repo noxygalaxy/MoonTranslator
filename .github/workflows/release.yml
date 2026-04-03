@@ -100,3 +100,27 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Discord
+        shell: pwsh
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          $title = "${{ github.event.inputs.release_title }}"
+          $releaseUrl = "https://github.com/${{ github.repository }}/releases/tag/$version"
+          $body = $env:RELEASE_BODY
+          if ($body.Length -gt 1900) { $body = $body.Substring(0, 1900) + "..." }
+
+          $payload = @{
+            embeds = @(
+              @{
+                title       = "$title ($version)"
+                url         = $releaseUrl
+                description = $body
+                color       = 3447003
+                timestamp   = (Get-Date -Format "o")
+                footer      = @{ text = "MoonTranslator Release" }
+              }
+            )
+          } | ConvertTo-Json -Depth 5
+
+          Invoke-RestMethod -Uri "${{ secrets.DISCORD_WEBHOOK_URL }}" -Method Post -ContentType "application/json" -Body $payload
