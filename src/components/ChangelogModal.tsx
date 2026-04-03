@@ -266,12 +266,29 @@ export default function ChangelogModal({ isOpen: externalIsOpen, onClose: extern
                   <strong className="font-semibold text-primary">{text.replace(/:$/, '')}</strong>
                 );
               },
+              a: ({ node, ...props }) => (
+                <a
+                  {...props}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (props.href) {
+                      import("@tauri-apps/plugin-shell")
+                        .then(({ open }) => open(props.href as string))
+                        .catch(() => window.open(props.href as string, "_blank"));
+                    }
+                  }}
+                  className="text-primary hover:underline cursor-pointer"
+                />
+              ),
               p: ({ children }) => (
                 <p className="mb-3 text-center">{children}</p>
               ),
             }}
           >
-            {changelog.replace(/^\*\*(.*?):?\*\*\s*$/gm, '### $1')}
+            {changelog
+              .replace(/^\*\*(.*?):?\*\*\s*$/gm, '### $1')
+              .replace(/(?<!\]\()(https?:\/\/[^\s)]+)/g, '[$1]($1)')
+            }
           </ReactMarkdown>
         </div>
         

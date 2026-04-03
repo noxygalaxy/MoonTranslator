@@ -31,15 +31,30 @@
       "capabilities": [
         {
           "identifier": "main-capability",
-          "windows": ["main"],
+          "windows": ["main", "popup"],
           "permissions": [
             "core:default",
             "core:window:allow-start-dragging",
+            "core:window:allow-set-size",
             "store:default",
             "store:allow-load",
             "store:allow-save",
             "store:allow-set",
-            "store:allow-get"
+            "store:allow-get",
+            "clipboard-manager:default",
+            "clipboard-manager:allow-read-text",
+            "clipboard-manager:allow-write-text",
+            "shell:allow-open"
+          ]
+        },
+        {
+          "identifier": "shell-urls",
+          "windows": ["main", "popup"],
+          "permissions": [
+            {
+              "identifier": "shell:allow-open",
+              "allow": [{ "url": "https://**" }, { "url": "http://**" }]
+            }
           ]
         }
       ]

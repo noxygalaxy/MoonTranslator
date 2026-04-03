@@ -70,24 +70,6 @@ export default function PopupPage() {
     activeApi === "google" ||
     activeApi === "bing";
 
-  const handleDropdownOpen = useCallback(async (isOpen: boolean) => {
-    try {
-      const { getCurrentWindow, LogicalSize } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().setSize(new LogicalSize(380, isOpen ? 620 : 280));
-    } catch {
-      
-    }
-  }, []);
-
-  const handleTranslatorDropdownOpen = useCallback(async (isOpen: boolean) => {
-    try {
-      const { getCurrentWindow, LogicalSize } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().setSize(new LogicalSize(380, isOpen ? 480 : 280));
-    } catch {
-      
-    }
-  }, []);
-
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
@@ -95,12 +77,11 @@ export default function PopupPage() {
       const insidePortal = translatorPortalRef.current?.contains(target);
       if (!insideToggle && !insidePortal) {
         setIsTranslatorSelectOpen(false);
-        handleTranslatorDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [handleTranslatorDropdownOpen]);
+  }, []);
 
   const readClipboard = useCallback(async () => {
     try {
@@ -337,7 +318,7 @@ export default function PopupPage() {
         className="flex items-center gap-2 px-4 py-2.5 shrink-0 border-b border-(--md-outline-variant) relative"
         style={{ zIndex: 30 }}
       >
-        <div className={`flex-1 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "translate-x-[calc(100%+44px)]" : "translate-x-0"}`}>
+        <div className={`flex-1 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "translate-x-49" : "translate-x-0"}`}>
           <LanguageSelector
             value={sourceLang}
             onChange={(val) => {
@@ -346,7 +327,6 @@ export default function PopupPage() {
             }}
             showAutoDetect
             compact
-            onOpenChange={handleDropdownOpen}
           />
         </div>
         <button
@@ -368,12 +348,13 @@ export default function PopupPage() {
               }, 50);
             }, 300);
           }}
+          disabled={sourceLang === "auto"}
           className={`md-icon-btn w-7 h-7 shrink-0 z-0 ${!isResetting ? "transition-all duration-300" : ""} ${isSwapping ? "rotate-180 scale-90 opacity-40" : "hover:scale-110"}`}
           title="Swap languages"
         >
           <ArrowRightLeft size={14} />
         </button>
-        <div className={`flex-1 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "-translate-x-[calc(100%+44px)]" : "translate-x-0"}`}>
+        <div className={`flex-1 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "-translate-x-49" : "translate-x-0"}`}>
           <LanguageSelector
             value={targetLang}
             onChange={(val) => {
@@ -381,7 +362,6 @@ export default function PopupPage() {
               saveLangPref("popupTargetLang", val);
             }}
             compact
-            onOpenChange={handleDropdownOpen}
           />
         </div>
       </div>
@@ -412,10 +392,11 @@ export default function PopupPage() {
             </div>
             <div className="pl-5">
               <a 
-                href="https://github.com/noxygalaxy/moontranslator/issues" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="underline opacity-90 hover:opacity-100 transition-opacity text-[11px] text-error"
+                onClick={(e) => {
+                  e.preventDefault();
+                  import("@tauri-apps/plugin-shell").then(({ open }) => open("https://github.com/noxygalaxy/moontranslator/issues")).catch(() => window.open("https://github.com/noxygalaxy/moontranslator/issues", "_blank"));
+                }}
+                className="underline opacity-90 hover:opacity-100 transition-opacity text-[11px] text-error cursor-pointer"
               >
                 Report this issue on GitHub
               </a>
@@ -501,7 +482,6 @@ export default function PopupPage() {
               onClick={() => {
                 const newState = !isTranslatorSelectOpen;
                 setIsTranslatorSelectOpen(newState);
-                handleTranslatorDropdownOpen(newState);
               }}
               className="flex items-center justify-between font-medium outline-none state-layer gap-2 cursor-pointer bg-surface-high text-secondary border border-(--md-outline-variant) rounded-(--md-shape-sm) py-1.5 pl-3 pr-2 text-xs transition-all"
             >
@@ -540,7 +520,6 @@ export default function PopupPage() {
                             setActiveApi(p.id);
                             await saveToStore();
                             setIsTranslatorSelectOpen(false);
-                            handleTranslatorDropdownOpen(false);
                           }}
                           className={`flex items-center justify-between px-3 py-2 mb-0.5 rounded-full text-left w-full hover:bg-[rgba(255,255,255,0.08)] transition-colors text-xs ${
                             isSelected
