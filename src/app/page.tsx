@@ -126,10 +126,21 @@ export default function Home() {
   }, [doTranslate]);
 
   const [isSwapping, setIsSwapping] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
   const handleSwap = () => {
+    if (isSwapping) return;
     setIsSwapping(true);
-    swapLanguages();
-    setTimeout(() => setIsSwapping(false), 300);
+    
+    setTimeout(() => {
+      setIsSwapping(false);
+      setIsResetting(true);
+      swapLanguages();
+      
+      setTimeout(() => {
+        setIsResetting(false);
+      }, 50);
+    }, 300);
   };
 
   useEffect(() => {
@@ -238,7 +249,7 @@ export default function Home() {
           <div className="flex-1" />
 
           <div className="flex items-center gap-4 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div className="w-48">
+            <div className={`w-48 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "translate-x-66" : "translate-x-0"}`}>
               <LanguageSelector
                 value={sourceLang}
                 onChange={setSourceLang}
@@ -250,13 +261,13 @@ export default function Home() {
             <button
               onClick={handleSwap}
               disabled={sourceLang === "auto"}
-              className={`md-icon-btn state-layer transition-transform duration-300 text-primary ${isSwapping ? "rotate-180 scale-90 opacity-80" : "hover:scale-110"}`}
+              className={`md-icon-btn state-layer text-primary z-0 ${!isResetting ? "transition-all duration-300" : ""} ${isSwapping ? "rotate-180 scale-90 opacity-40" : "hover:scale-110"}`}
               title="Swap languages"
             >
               <ArrowRightLeft size={22} />
             </button>
 
-            <div className="w-48">
+            <div className={`w-48 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "-translate-x-66" : "translate-x-0"}`}>
               <LanguageSelector
                 value={targetLang}
                 onChange={setTargetLang}

@@ -58,6 +58,8 @@ export default function PopupPage() {
   const [isTranslatorSelectOpen, setIsTranslatorSelectOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const [isSwapping, setIsSwapping] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const initRef = useRef(false);
   const translatorSelectRef = useRef<HTMLDivElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -335,7 +337,7 @@ export default function PopupPage() {
         className="flex items-center gap-2 px-4 py-2.5 shrink-0 border-b border-(--md-outline-variant) relative"
         style={{ zIndex: 30 }}
       >
-        <div className="flex-1">
+        <div className={`flex-1 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "translate-x-[calc(100%+44px)]" : "translate-x-0"}`}>
           <LanguageSelector
             value={sourceLang}
             onChange={(val) => {
@@ -349,18 +351,29 @@ export default function PopupPage() {
         </div>
         <button
           onClick={() => {
-            const temp = sourceLang;
-            setSourceLang(targetLang);
-            setTargetLang(temp);
-            saveLangPref("popupSourceLang", targetLang);
-            saveLangPref("popupTargetLang", temp);
+            if (isSwapping) return;
+            setIsSwapping(true);
+            
+            setTimeout(() => {
+              setIsSwapping(false);
+              setIsResetting(true);
+              const temp = sourceLang;
+              setSourceLang(targetLang);
+              setTargetLang(temp);
+              saveLangPref("popupSourceLang", targetLang);
+              saveLangPref("popupTargetLang", temp);
+              
+              setTimeout(() => {
+                setIsResetting(false);
+              }, 50);
+            }, 300);
           }}
-          className="md-icon-btn w-7 h-7 shrink-0"
+          className={`md-icon-btn w-7 h-7 shrink-0 z-0 ${!isResetting ? "transition-all duration-300" : ""} ${isSwapping ? "rotate-180 scale-90 opacity-40" : "hover:scale-110"}`}
           title="Swap languages"
         >
           <ArrowRightLeft size={14} />
         </button>
-        <div className="flex-1">
+        <div className={`flex-1 z-10 ${!isResetting ? "transition-all duration-300 ease-in-out" : ""} ${isSwapping ? "-translate-x-[calc(100%+44px)]" : "translate-x-0"}`}>
           <LanguageSelector
             value={targetLang}
             onChange={(val) => {

@@ -1,5 +1,6 @@
 **Additions:**
 
+- **Language Swap:** Added smooth language swap animation to the app.
 - **Changelog:** Added changelog to the app.
 
 **Fixes:**
