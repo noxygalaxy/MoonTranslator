@@ -9,6 +9,7 @@ import TranslatorOutput from "@/components/TranslatorOutput";
 import LanguageSelector from "@/components/LanguageSelector";
 import SettingsPanel from "@/components/SettingsPanel";
 import UpdateBanner from "@/components/UpdateBanner";
+import ChangelogModal from "@/components/ChangelogModal";
 import { ArrowRightLeft, Settings, TriangleAlert, Zap, ZapOff, X } from "lucide-react";
 import Image from "next/image";
 
@@ -34,6 +35,7 @@ export default function Home() {
     useSettingsStore();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
 
   useEffect(() => {
     loadFromStore();
@@ -145,7 +147,8 @@ export default function Home() {
   return (
     <div className="h-screen w-screen p-0.5 bg-transparent">
       <div className="flex flex-col h-full overflow-hidden shadow-2xl relative border border-[rgba(255,255,255,0.05)] animate-launch bg-background rounded-(--md-shape-lg)">
-      <UpdateBanner />
+      <UpdateBanner onViewChangelog={() => setShowChangelogModal(true)} />
+      <ChangelogModal isOpen={showChangelogModal} onClose={() => setShowChangelogModal(false)} />
 
       <header
         className="flex items-center justify-between px-6 h-18 shrink-0"

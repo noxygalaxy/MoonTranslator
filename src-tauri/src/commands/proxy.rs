@@ -17,7 +17,10 @@ pub struct ProxyResponse {
 
 #[tauri::command]
 pub async fn proxy_request(args: ProxyRequestArgs) -> Result<ProxyResponse, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .user_agent("MoonTranslator")
+        .build()
+        .map_err(|e| format!("Failed to build client: {}", e))?;
 
     let mut request_builder = match args.method.to_uppercase().as_str() {
         "GET" => client.get(&args.url),

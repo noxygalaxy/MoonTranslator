@@ -5,13 +5,15 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useTranslatorStore, API_PROVIDERS } from "@/store/translatorStore";
 import type { ApiProvider } from "@/store/translatorStore";
 import { validateApiKey } from "@/lib/translate";
+import { APP_VERSION } from "@/lib/version";
+import ChangelogModal from "@/components/ChangelogModal";
 import {
   X,
   Moon,
   Sun,
   Key,
   Monitor,
-  RefreshCw,
+  FileText,
   Trash2,
   Check,
   Loader2,
@@ -31,8 +33,12 @@ export default function SettingsPanel() {
     setApiKey,
     activeApi,
     setActiveApi,
+    providerModes,
+    setProviderMode,
     saveToStore,
   } = useSettingsStore();
+
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
 
   const { setActiveApi: setTranslatorApi } = useTranslatorStore();
 
@@ -345,21 +351,11 @@ export default function SettingsPanel() {
             </h3>
             <div className="flex flex-col gap-2">
               <button
-                onClick={async () => {
-                  try {
-                    const { getCurrentWindow } = await import(
-                      "@tauri-apps/api/window"
-                    );
-                    const win = getCurrentWindow();
-                    await win.emit("check-update", {});
-                  } catch {
-                    console.log("Not in Tauri");
-                  }
-                }}
+                onClick={() => setShowChangelogModal(true)}
                 className="md-card flex items-center gap-3 text-sm cursor-pointer text-foreground"
               >
-                <RefreshCw size={18} className="text-secondary" />
-                Check for Updates
+                <FileText size={18} className="text-secondary" />
+                View Changelog
               </button>
 
               <button
@@ -373,10 +369,15 @@ export default function SettingsPanel() {
           </section>
 
           <div className="pt-4 text-center text-xs font-mono border-t border-(--md-outline-variant) text-secondary tracking-widest">
-            MoonTranslator v0.1.1
+            MoonTranslator v{APP_VERSION}
           </div>
         </div>
       </div>
+      
+      <ChangelogModal 
+        isOpen={showChangelogModal} 
+        onClose={() => setShowChangelogModal(false)} 
+      />
     </>
   );
 }

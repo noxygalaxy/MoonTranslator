@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "MoonTranslator",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "dev.noxygalaxy.moontranslator",
   "build": {
     "frontendDist": "../out",
@@ -27,7 +27,22 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "core:window:allow-start-dragging",
+            "store:default",
+            "store:allow-load",
+            "store:allow-save",
+            "store:allow-set",
+            "store:allow-get"
+          ]
+        }
+      ]
     }
   },
   "bundle": {
@@ -44,18 +59,11 @@
         "headerImage": null,
         "sidebarImage": null,
         "installMode": "both",
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "startMenuFolder": "MoonTranslator"
       }
-    },
-    "createUpdaterArtifacts": "v1Compatible"
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFMDU2OTVCN0FBRjEwNTcKUldSWEVLOTZXMmtGL2hYaCtVaUpNaThUcnNkQTdHUkxCS1l4M1UrNmRkcjB1cEQ0U3RmN3JIVmoK",
-      "endpoints": [
-        "https://api.github.com/repos/noxygalaxy/MoonTranslator/releases/latest"
-      ]
     }
   }
 }

@@ -59,6 +59,7 @@ pub fn run() {
             commands::window::simulate_paste,
             commands::store::save_settings,
             commands::store::load_settings,
+            commands::updater::download_and_install_update,
         ])
         .setup(|app| {
             let open_item = MenuItemBuilder::with_id("open", "Open MoonTranslator").build(app)?;

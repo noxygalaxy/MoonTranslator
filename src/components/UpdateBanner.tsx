@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Download } from "lucide-react";
+import { X, Download, FileText } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
-export default function UpdateBanner() {
+interface UpdateBannerProps {
+  onViewChangelog?: () => void;
+}
+
+export default function UpdateBanner({ onViewChangelog }: UpdateBannerProps) {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [newVersion, setNewVersion] = useState("");
+  const [downloadUrl, setDownloadUrl] = useState("");
   const [updating, setUpdating] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [noUpdateAvailable, setNoUpdateAvailable] = useState(false);
 
   useEffect(() => {
     checkForUpdates();
@@ -18,7 +25,7 @@ export default function UpdateBanner() {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         const win = getCurrentWindow();
         unlisten = await win.listen("check-update", () => {
-          checkForUpdates();
+          checkForUpdates(true); // Pass true to show banner when manually checking
         });
       } catch {}
     })();
@@ -28,7 +35,7 @@ export default function UpdateBanner() {
     };
   }, []);
 
-  const checkForUpdates = async () => {
+  const checkForUpdates = async (showBanner = false) => {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const result = await invoke<{ status: number; body: string }>(
@@ -37,20 +44,46 @@ export default function UpdateBanner() {
           args: {
             url: "https://api.github.com/repos/noxygalaxy/MoonTranslator/releases/latest",
             method: "GET",
-            headers: { Accept: "application/vnd.github.v3+json" },
+            headers: { 
+              Accept: "application/vnd.github.v3+json",
+              "User-Agent": "MoonTranslator"
+            },
             body: null,
           },
         }
       );
 
+      console.log("Update check response:", result);
+
       if (result.status === 200) {
         const release = JSON.parse(result.body);
         const latestVersion = release.tag_name?.replace("v", "") || "";
-        const currentVersion = "0.1.1";
 
-        if (latestVersion && latestVersion !== currentVersion) {
-          setNewVersion(latestVersion);
-          setUpdateAvailable(true);
+        console.log("Current version:", APP_VERSION);
+        console.log("Latest version:", latestVersion);
+
+        if (latestVersion && latestVersion !== APP_VERSION) {
+          // Find the portable zip asset
+          const portableAsset = release.assets?.find((asset: any) => 
+            asset.name.includes("portable.zip")
+          );
+
+          if (portableAsset) {
+            setNewVersion(latestVersion);
+            setDownloadUrl(portableAsset.browser_download_url);
+            setUpdateAvailable(true);
+            setNoUpdateAvailable(false);
+            console.log("Update available!");
+          }
+        } else {
+          console.log("No update available");
+          setUpdateAvailable(false);
+          // Only show "latest version" banner if manually checking
+          if (showBanner) {
+            setNoUpdateAvailable(true);
+            // Auto-hide after 3 seconds
+            setTimeout(() => setNoUpdateAvailable(false), 3000);
+          }
         }
       }
 
@@ -58,53 +91,82 @@ export default function UpdateBanner() {
       const store = await load("settings.json", { defaults: {} });
       await store.set("lastUpdateCheck", Date.now());
       await store.save();
-    } catch {}
+    } catch (error) {
+      console.error("Update check failed:", error);
+    }
   };
 
   const handleUpdate = async () => {
     setUpdating(true);
     try {
-      const { check } = await import("@tauri-apps/plugin-updater");
-      const update = await check();
-      if (update) {
-        await update.downloadAndInstall();
-        const { relaunch } = await import("@tauri-apps/plugin-process");
-        await relaunch();
-      }
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("download_and_install_update", {
+        version: newVersion,
+        downloadUrl: downloadUrl,
+      });
     } catch (e) {
       console.error("Update failed:", e);
       setUpdating(false);
     }
   };
 
-  if (!updateAvailable || dismissed) return null;
+  if (updateAvailable && !dismissed) {
+    return (
+      <div
+        className="toast-enter flex items-center justify-between gap-3 px-5 py-3 shrink-0 rounded-(--md-shape-md) bg-surface-high"
+      >
+        <div className="flex items-center gap-3 text-sm">
+          <Download size={16} />
+          <span>
+            Update available:{" "}
+            <span className="font-semibold">v{newVersion}</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleUpdate}
+            disabled={updating}
+            className="text-sm cursor-pointer font-medium px-4 py-1.5 rounded-full transition-opacity disabled:opacity-50 bg-(--md-inverse-primary) text-(--md-inverse-on-primary)"
+          >
+            {updating ? "Installing..." : "Install"}
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="md-icon-btn w-8 h-8 text-inverse-on-surface"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <div
-      className="toast-enter flex items-center justify-between gap-3 px-5 py-3 shrink-0 rounded-(--md-shape-md) bg-surface-high"
-    >
-      <div className="flex items-center gap-3 text-sm">
-        <Download size={16} />
-        <span>
-          Update available:{" "}
-          <span className="font-semibold">v{newVersion}</span>
-        </span>
+  if (noUpdateAvailable) {
+    return (
+      <div
+        className="toast-enter flex items-center justify-between gap-3 px-5 py-3 shrink-0 rounded-(--md-shape-md) bg-surface-high"
+      >
+        <div className="flex items-center gap-3 text-sm">
+          <FileText size={16} />
+          <span>You're on the latest version!</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onViewChangelog}
+            className="text-sm cursor-pointer font-medium px-4 py-1.5 rounded-full bg-(--md-inverse-primary) text-(--md-inverse-on-primary)"
+          >
+            View Changelog
+          </button>
+          <button
+            onClick={() => setNoUpdateAvailable(false)}
+            className="md-icon-btn w-8 h-8 text-inverse-on-surface"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleUpdate}
-          disabled={updating}
-          className="text-sm cursor-pointer font-medium px-4 py-1.5 rounded-full transition-opacity disabled:opacity-50 bg-(--md-inverse-primary) text-(--md-inverse-on-primary)"
-        >
-          {updating ? "Updating..." : "Install"}
-        </button>
-        <button
-          onClick={() => setDismissed(true)}
-          className="md-icon-btn w-8 h-8 text-inverse-on-surface"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
