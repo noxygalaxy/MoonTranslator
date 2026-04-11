@@ -21,6 +21,11 @@ const CARET_LINE_HEIGHT_ESTIMATE: i32 = 20;
 
 fn show_and_focus_window(app: &AppHandle, label: &str) {
     if let Some(window) = app.get_webview_window(label) {
+        // fix app close??
+        #[cfg(target_os = "windows")]
+        let _ = window.set_skip_taskbar(false);
+
+        let _ = window.unminimize();
         let _ = window
             .show()
             .inspect_err(|e| log::warn!("Failed to show window {label}: {e}"));
@@ -56,6 +61,9 @@ pub fn run() {
             commands::proxy::proxy_request,
             commands::window::open_popup_window,
             commands::window::close_popup_window,
+            commands::window::hide_main_window,
+            commands::window::open_main_window,
+            commands::window::set_popup_pinned,
             commands::window::simulate_paste,
             commands::store::save_settings,
             commands::store::load_settings,
@@ -125,10 +133,17 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
-                    let _ = window
-                        .hide()
-                        .inspect_err(|e| log::warn!("Failed to hide main window: {e}"));
                     api.prevent_close();
+
+                    let win = window.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let _ = win
+                            .hide()
+                            .inspect_err(|e| log::warn!("Failed to hide main window: {e}"));
+
+                        #[cfg(target_os = "windows")]
+                        let _ = win.set_skip_taskbar(true);
+                    });
                 }
             }
         })
@@ -243,6 +258,10 @@ async fn open_popup(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     if let Some(popup) = app.get_webview_window("popup") {
+        #[cfg(target_os = "windows")]
+        let _ = popup.set_skip_taskbar(true);
+        let _ = popup.set_always_on_top(true);
+
         let _ = popup
             .set_position(tauri::PhysicalPosition::new(target_x, target_y))
             .inspect_err(|e| log::warn!("Failed to position popup: {e}"));

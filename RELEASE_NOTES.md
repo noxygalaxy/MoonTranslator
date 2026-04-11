@@ -1,10 +1,8 @@
 **Additions:**
 
-- **Language Swap:** Added smooth language swap animation to the app.
-- **Changelog:** Added changelog to the app.
-- **Discord:** Added Discord server link to the app. (https://discord.gg/F9FD52qWwK)
+- **Pin Window:** Added ability to pin the popup window to always stay on top.
+- **Open Main Window:** Added a button in the popup window to easily open the main translation window with current text.
 
 **Fixes:**
 
-- **Fetching Updates:** Fixed fetching updates from GitHub.
-- **Update Process:** Fixed update process to properly install the new version.
+- **Taskbar Visibility:** Fixed an issue where the main window would become invisible but stay running in the taskbar when closed via the X button.

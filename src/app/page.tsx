@@ -47,6 +47,29 @@ export default function Home() {
     }
   }, [settingsActiveApi]);
 
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        unlisten = await listen<{ text: string; sourceLang: string; targetLang: string }>("set-main-text", (event) => {
+          const state = useTranslatorStore.getState();
+          state.setSourceText(event.payload.text);
+          if (event.payload.sourceLang !== "auto") {
+            state.setSourceLang(event.payload.sourceLang);
+          }
+          state.setTargetLang(event.payload.targetLang);
+        });
+      } catch (e) {
+        console.error("Failed to listen for set-main-text", e);
+      }
+    })();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+
   const [apiDropdownOpen, setApiDropdownOpen] = useState(false);
   const providerButtonRef = useRef<HTMLDivElement>(null);
 
@@ -229,8 +252,8 @@ export default function Home() {
           <button
             onClick={async () => {
               try {
-                const { getCurrentWindow } = await import("@tauri-apps/api/window");
-                await getCurrentWindow().hide();
+                const { invoke } = await import("@tauri-apps/api/core");
+                await invoke("hide_main_window");
               } catch {
                 window.close();
               }

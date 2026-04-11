@@ -68,6 +68,10 @@ pub async fn open_popup_window(app: AppHandle) -> Result<(), String> {
     let (target_x, target_y) = calculate_popup_position(&app, has_text);
 
     if let Some(popup) = app.get_webview_window("popup") {
+        #[cfg(target_os = "windows")]
+        let _ = popup.set_skip_taskbar(true);
+        let _ = popup.set_always_on_top(true);
+        
         let _ = popup
             .set_position(tauri::PhysicalPosition::new(target_x, target_y))
             .inspect_err(|e| log::warn!("Failed to set popup position: {}", e));
@@ -103,9 +107,50 @@ pub async fn open_popup_window(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 pub async fn close_popup_window(app: AppHandle) -> Result<(), String> {
     if let Some(popup) = app.get_webview_window("popup") {
+        #[cfg(target_os = "windows")]
+        let _ = popup.set_skip_taskbar(true);
+
         let _ = popup
             .hide()
             .inspect_err(|e| log::warn!("Failed to hide popup: {}", e));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn hide_main_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window
+            .hide()
+            .inspect_err(|e| log::warn!("Failed to hide main window: {}", e));
+
+        #[cfg(target_os = "windows")]
+        let _ = window.set_skip_taskbar(true);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_main_window(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        
+        #[cfg(target_os = "windows")]
+        let _ = window.set_skip_taskbar(false);
+        
+        let _ = window.set_focus();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_popup_pinned(app: AppHandle, pinned: bool) -> Result<(), String> {
+    if let Some(popup) = app.get_webview_window("popup") {
+        let _ = popup.set_always_on_top(pinned).inspect_err(|e| log::warn!("Failed to set always on top: {}", e));
+        
+        #[cfg(target_os = "windows")]
+        let _ = popup.set_skip_taskbar(pinned);
     }
     Ok(())
 }

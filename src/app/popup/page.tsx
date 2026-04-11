@@ -25,6 +25,9 @@ import {
   TriangleAlert,
   ArrowRightLeft,
   Pencil,
+  Pin,
+  PinOff,
+  SquareArrowOutUpRight,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -60,6 +63,7 @@ export default function PopupPage() {
   const [editText, setEditText] = useState("");
   const [isSwapping, setIsSwapping] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isPinned, setIsPinned] = useState(true);
   const initRef = useRef(false);
   const translatorSelectRef = useRef<HTMLDivElement>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -283,6 +287,34 @@ export default function PopupPage() {
     }, 50);
   };
 
+  const handleTogglePin = async () => {
+    try {
+      const newState = !isPinned;
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("set_popup_pinned", { pinned: newState });
+      setIsPinned(newState);
+    } catch {
+      console.error("Failed to toggle pin");
+    }
+  };
+
+  const handleOpenMain = async () => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const { emit } = await import("@tauri-apps/api/event");
+      
+      const textToSet = (clipboardText && clipboardText !== "(Could not read clipboard)") ? clipboardText : "";
+      if (textToSet) {
+        await emit("set-main-text", { text: textToSet, sourceLang, targetLang });
+      }
+      
+      await invoke("open_main_window");
+      await invoke("close_popup_window");
+    } catch {
+      console.error("Failed to open main window");
+    }
+  };
+
   return (
     <div
       className="flex flex-col select-none relative bg-surface text-foreground rounded-(--md-shape-lg) overflow-visible"
@@ -306,12 +338,28 @@ export default function PopupPage() {
             MoonTranslator
           </span>
         </div>
-        <button
-          onClick={handleClose}
-          className="md-icon-btn w-7 h-7"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleTogglePin}
+            className={`md-icon-btn w-7 h-7 ${isPinned ? "text-primary" : "text-secondary"}`}
+            title={isPinned ? "Unpin window" : "Pin window"}
+          >
+            {isPinned ? <Pin size={14} className="fill-current" /> : <PinOff size={14} />}
+          </button>
+          <button
+            onClick={handleOpenMain}
+            className="md-icon-btn w-7 h-7"
+            title="Open in main window"
+          >
+            <SquareArrowOutUpRight size={14} />
+          </button>
+          <button
+            onClick={handleClose}
+            className="md-icon-btn w-7 h-7"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       <div
